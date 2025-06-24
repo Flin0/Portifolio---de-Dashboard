@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfólio de Dashboards - Filipe Lino</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* --- TEMA BASE "DEEP SPACE" --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #cbd5e1;
+        }
+
+        /* --- COMPONENTES REUTILIZÁVEIS --- */
+        .nav-link.active {
+            background-color: #2563eb;
+            color: #fff;
+            font-weight: 600;
+        }
+        .nav-link.active.theme-poker {
+             background-color: #be123c;
+        }
+        
+        .dashboard-section {
+            background-color: #1e293b;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+        }
+        .kpi-card {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            transition: all 0.3s ease;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            position: relative; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            background-color: #334155;
+        }
+        .tooltip {
+            visibility: hidden; opacity: 0; position: absolute; bottom: 105%; left: 50%;
+            transform: translateX(-50%); background-color: #334155; color: #e2e8f0;
+            padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.75rem;
+            width: max-content; max-width: 250px; z-index: 10; transition: opacity 0.2s ease-in-out; pointer-events: none;
+        }
+        .kpi-card:hover .tooltip { visibility: visible; opacity: 1; }
+        .chart-container {
+            background-color: #0f172a; border: 1px solid #334155;
+            padding: 1.5rem; border-radius: 0.75rem;
+        }
+        .filter-button.active-filter { color: #fff; font-weight: 600; }
+        .insight-text { border-top: 1px solid #334155; padding-top: 0.75rem; margin-top: 1rem; }
+        .chart-wrapper { position: relative; height: 280px; }
+        .kpi-trend-chart-wrapper {
+            height: 40px;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Estilos para o Heatmap de Poker --- */
+        .heatmap-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%; /* Ocupa a altura do chart-wrapper */
+        }
+        .hand-grid { 
+            display: grid; 
+            grid-template-columns: repeat(13, 1fr); 
+            gap: 2px; 
+            width: 100%; 
+            max-width: 280px; /* Limita o tamanho máximo */
+            aspect-ratio: 1 / 1; /* Mantém o grid quadrado */
+        }
+        .hand-cell {
+            width: 100%; aspect-ratio: 1 / 1; font-size: clamp(0.5rem, 1.5vw, 0.65rem); display: flex;
+            align-items: center; justify-content: center; border-radius: 2px;
+        }
+
+        /* --- MODIFICADORES DE TEMA PARA CADA DASHBOARD --- */
+        .theme-financeiro .active-filter { background-color: #2563eb; }
+        .theme-pagamentos .active-filter { background-color: #16a34a; }
+        .theme-educacao .active-filter { background-color: #d97706; }
+        .theme-delivery .active-filter { background-color: #dc2626; }
+        .theme-service .active-filter { background-color: #0891b2; }
+        .theme-poker .active-filter { background-color: #be123c; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-slate-900/80 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-slate-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Filipe Lino</h1>
+                    <p class="text-sm text-slate-400">Portfólio de Dashboards Interativos</p>
+                </div>
+                <nav id="main-nav" class="hidden md:flex bg-slate-800 border border-slate-700 p-1 rounded-xl gap-1">
+                    <a href="#financeiro" data-tab="financeiro" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300">Financeiro</a>
+                    <a href="#pagamentos" data-tab="pagamentos" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300">Pagamentos</a>
+                    <a href="#educacao" data-tab="educacao" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300">Educação</a>
+                    <a href="#delivery" data-tab="delivery" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300">Delivery</a>
+                    <a href="#service" data-tab="service" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300">Serviços</a>
+                    <a href="#poker" data-tab="poker" class="nav-link px-3 py-2 text-sm rounded-lg text-slate-300 font-bold">HARPOKER 🖖</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-container" class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContainer = document.getElementById('main-container');
+            let chartInstances = {};
+
+            const pokerData = {
+                tournament: {
+                    '9': { kpis: [22.5, 19.8, 8.5, 28.2, 52.1, '4.5', '1.8', [4.2, 4.8, 4.5]], charts: { pokerChart1: {vpip:[13,15,20,28,35,18], pfr:[12,14,19,27,33,12], threeBet: [4, 5, 7, 9, 12, 5], cBet: [65, 68, 62, 60, 55, 58], foldTo3Bet: [50, 48, 55, 60, 65, 70]}, pokerChart2: [65, 45, 50, 48], pokerChart3: [-10, -5, 5, 25, 15, -8], pokerChart4: ['Mãos com valor (AA, KK, QQ) apresentam alta lucratividade.', 'Blefes com suited connectors em posição se mostram rentáveis.', 'Perdas significativas ao pagar 3-bets fora de posição com mãos dominadas.'] } },
+                    '6': { kpis: [28.1, 24.3, 10.2, 29.5, 53.0, '5.1', '2.2', [5.0, 4.9, 5.1]], charts: { pokerChart1: {vpip:[18,22,28,45,40,22], pfr:[17,21,27,44,35,15], threeBet: [6, 8, 10, 14, 15, 8], cBet: [70, 72, 68, 65, 60, 62], foldTo3Bet: [45, 42, 50, 55, 60, 65]}, pokerChart2: [70, 42, 55, 45], pokerChart3: [-12, -7, 8, 30, 18, -10], pokerChart4: ['Estratégia de C-Bet no Flop está sendo explorada por oponentes agressivos.', 'Aumento da frequência de 3-bet do botão tem sido eficaz.', 'Necessário ajustar o range de call no big blind contra raises de posições iniciais.'] } },
+                },
+                cash: {
+                    '9': { kpis: [19.0, 15.5, 7.0, 26.0, 51.5, '3.8', '1.5', [3.5, 4.0, 3.8]], charts: { pokerChart1: {vpip:[11,13,18,25,30,15], pfr:[10,12,17,24,28,10], threeBet: [3, 4, 6, 8, 10, 4], cBet: [60, 62, 58, 55, 50, 52], foldTo3Bet: [55, 52, 60, 65, 70, 75]}, pokerChart2: [60, 50, 48, 52], pokerChart3: [-8, -4, 4, 20, 12, -6], pokerChart4: ['Agressividade pós-flop está gerando bons resultados em potes pequenos.', 'Identificada tendência de over-folding para apostas no river por parte dos oponentes.', 'O VPIP nas posições iniciais está ligeiramente alto, causando perdas marginais.'] } },
+                    '6': { kpis: [24.5, 20.1, 9.1, 27.8, 52.8], charts: { pokerChart1: {vpip:[15,19,25,40,38,20], pfr:[14,18,24,39,33,14], threeBet: [5, 7, 9, 12, 14, 7], cBet: [68, 70, 65, 62, 58, 60], foldTo3Bet: [50, 48, 55, 60, 65, 68]}, pokerChart2: [68, 48, 52, 50], pokerChart3: [-10, -6, 6, 28, 16, -9], pokerChart4: ['Aumento da agressividade (3-bet) do small blind contra o botão tem se mostrado lucrativo.', 'Necessário revisar a defesa do big blind.', 'Apostar por valor no river tem extraído o máximo dos oponentes.'] } }
+                }
+            };
+            
+            const dashboardLibrary = {
+                financeiro: {
+                    title: "Dashboard de Planejamento Financeiro (FP&A)",
+                    description: "Análise de performance financeira, comparando resultados realizados contra o orçamento e projeções.",
+                    theme: "theme-financeiro",
+                    filters: [{ id: 'periodo', label: 'Categoria', options: ['Q1', 'Q2'] }],
+                    data: {
+                        Q1: { kpis: ['R$ 15.2M', '28.4%', 'R$ 6.8M', 'R$ 2.1M', 'R$ 850K', '+2.5%', 'R$ 4.1M', [5.0, 4.8, 5.4]], charts: { fpaChart1: [[5.0, 4.8, 5.4], [2.2, 2.3, 2.3], [4.9, 4.9, 5.2]], fpaChart2: [45, 25, 15, 15], fpaChart3: [2.1, 2.5, 2.8, 3.2, 3.5, 4.1], fpaChart4: {realizado: [90, 85, 95, 70, 80], esperado: [80, 80, 80, 80, 80]} } },
+                        Q2: { kpis: ['R$ 16.5M', '29.1%', 'R$ 7.2M', 'R$ 2.5M', 'R$ 920K', '+2.8%', 'R$ 4.5M', [4.8, 5.4, 5.9]], charts: { fpaChart1: [[5.2, 5.5, 5.8], [2.4, 2.4, 2.5], [5.1, 5.3, 5.6]], fpaChart2: [48, 22, 18, 12], fpaChart3: [2.5, 2.9, 3.1, 3.6, 3.8, 4.5], fpaChart4: {realizado: [95, 88, 92, 75, 85], esperado: [85, 85, 85, 85, 85]} } }
+                    },
+                    kpiDefs: [ { title: 'Receita Total', description: 'Faturamento bruto total no período.' }, { title: 'Margem EBITDA', description: 'Lucro operacional como % da receita.' }, { title: 'Custo (COGS)', description: 'Custo dos produtos vendidos.' }, { title: 'Fluxo Caixa Op.', description: 'Caixa gerado pelas operações.' }, { title: 'CAPEX', description: 'Investimentos em ativos.' }, { title: 'Cresc. Receita (YoY)', description: 'Crescimento da receita vs. mesmo período do ano anterior.' }, { title: 'Lucro Líquido', description: 'Resultado final após impostos e juros.' }, { title: 'Receita Mensal', description: 'Evolução da receita dentro do trimestre.' } ],
+                    charts: [
+                        { id: 'fpaChart1', title: 'Realizado vs. Orçado', type: 'bar', insight: 'A receita superou o orçado, mas os custos também subiram, pressionando a margem.' },
+                        { id: 'fpaChart2', title: 'Composição de Despesas (OPEX)', type: 'doughnut', insight: 'Despesas com Pessoal e Marketing dominam o OPEX. Analisar ROI de marketing é crucial.' },
+                        { id: 'fpaChart3', title: 'Projeção de Fluxo de Caixa', type: 'line', insight: 'Projeção indica necessidade de capital de giro no próximo trimestre se o crescimento de custos continuar.'},
+                        { id: 'fpaChart4', title: 'Performance vs. Metas', type: 'radar_performance', insight: 'Receita e Margem estão acima do esperado, mas o controle de Custos e Despesas precisa de atenção para não comprometer o Lucro.'}
+                    ]
+                },
+                 pagamentos: {
+                    title: "Dashboard de Meios de Pagamento",
+                    description: "Análise de volume transacional (TPV), taxas e métricas de risco como chargeback.",
+                    theme: "theme-pagamentos",
+                    filters: [ { id: 'region', label: 'Categoria', options: ['BR', 'LATAM'] } ],
+                    data: {
+                        BR: { kpis: ['R$ 1.2Bi', '1.85%', '0.45%', '92.5%', '1.5M', '12%', '3.2M', [1.0, 1.1, 1.2]], charts: { pagamentosChart1: [[200, 220, 230, 250, 260, 280], [150, 180, 240, 280, 310, 350]], pagamentosChart2: [1.2, 0.5, 0.2], pagamentosChart3: [88, 92, 91, 93, 92, 92.5], pagamentosChart4: {realizado: [95, 90, 80, 98, 85], esperado: [90, 90, 90, 90, 90]} }},
+                        LATAM: { kpis: ['R$ 2.1Bi', '1.70%', '0.65%', '90.1%', '2.8M', '15%', '5.1M', [1.8, 1.9, 2.1]], charts: { pagamentosChart1: [[350, 380, 400, 410, 430, 450], [250, 290, 350, 400, 440, 500]], pagamentosChart2: [1.8, 0.8, 0.4], pagamentosChart3: [85, 88, 87, 89, 90, 90.1], pagamentosChart4: {realizado: [92, 85, 75, 95, 80], esperado: [90, 90, 90, 90, 90]} } }
+                    },
+                    kpiDefs: [ { title: 'TPV (R$)', description: 'Volume Total de Pagamentos processado.'}, { title: 'Take Rate (%)', description: 'Percentual da receita retido pela empresa sobre o TPV.'}, { title: 'Chargeback (%)', description: 'Percentual de transações contestadas.'}, { title: 'Tx. Aprovação', description: 'Percentual de transações aprovadas.'}, { title: 'Clientes Ativos', description: 'Número de clientes únicos que transacionaram.'}, { title: 'Cresc. TPV (YoY)', description: 'Crescimento do TPV vs. ano anterior.'}, { title: 'Nº Transações', description: 'Número total de transações processadas.'}, { title: 'TPV Mensal', description: 'Evolução do TPV dentro do trimestre.'} ],
+                    charts: [
+                        { id: 'pagamentosChart1', title: 'Evolução do TPV', type: 'line_multi', insight: 'Crescimento do TPV é forte, impulsionado pelo Varejo Online.' },
+                        { id: 'pagamentosChart2', title: 'Risco por Segmento', type: 'bar_horizontal', insight: 'Aumento de chargeback em "Serviços Digitais" requer investigação de possíveis fraudes.' },
+                        { id: 'pagamentosChart3', title: 'Taxa de Aprovação Histórica', type: 'line_simple', insight: 'A taxa de aprovação está estável, mas uma pequena queda no último mês merece atenção.' },
+                        { id: 'pagamentosChart4', title: 'Performance vs. Metas', type: 'radar_performance', insight: 'Crescimento e Volume estão acima das metas, mas o controle de Risco está abaixo, exigindo ação imediata.' }
+                    ]
+                },
+                educacao: {
+                    title: "Dashboard de Educação (Plataforma de Cursos)",
+                    description: "Análise de métricas de engajamento de alunos e performance de instrutores em uma plataforma de ensino.",
+                    theme: "theme-educacao",
+                    filters: [ { id: 'modalidade', label: 'Categoria', options: ['Tech', 'Business'] } ],
+                    data: {
+                        Tech: { kpis: ['12.5K', '8.2%', 'R$ 850', 'R$ 12.3K', '75', '85%', '25 min', [11.5, 12.0, 12.5]], charts: { educacaoChart1: [[10200, 8500, 11500, 9200], [-1500, -1200, -1100, -950]], educacaoChart2: [55, 15, 20, 10], educacaoChart3: [4.8, 4.5, 4.9, 4.7], educacaoChart4: {realizado: [90, 78, 95, 85, 92], esperado: [85, 85, 85, 85, 85]} } },
+                        Business: { kpis: ['8.1K', '9.5%', 'R$ 920', 'R$ 10.1K', '68', '78%', '35 min', [7.5, 7.8, 8.1]], charts: { educacaoChart1: [[7200, 6800, 8000, 7500], [-1800, -1500, -1400, -1100]], educacaoChart2: [40, 35, 15, 10], educacaoChart3: [4.2, 4.0, 4.5, 4.3], educacaoChart4: {realizado: [85, 75, 90, 80, 88], esperado: [85, 85, 85, 85, 85]} } }
+                    },
+                    kpiDefs: [ { title: 'Alunos Ativos', description: 'Número de alunos com atividade na plataforma nos últimos 30 dias.' }, { title: 'Churn Rate (%)', description: 'Percentual de alunos que cancelaram a assinatura no mês.' }, { title: 'CAC (R$)', description: 'Custo de Aquisição por novo aluno.' }, { title: 'LTV (R$)', description: 'Valor do Ciclo de Vida do aluno (receita total esperada).' }, { title: 'NPS', description: 'Net Promoter Score, indicador de satisfação e lealdade.' }, { title: 'Taxa de Conclusão', description: 'Percentual de alunos que concluem os cursos iniciados.' }, { title: 'Tempo Médio/Sessão', description: 'Tempo médio que cada aluno passa na plataforma por visita.' }, { title: 'Evolução Alunos', description: 'Crescimento de alunos ativos no trimestre.' } ],
+                    charts: [
+                        { id: 'educacaoChart1', title: 'Captação vs. Churn (Semestral)', type: 'bar_stacked', insight: 'Crescimento líquido positivo, mas o churn aumentou no último semestre. Focar em retenção.' },
+                        { id: 'educacaoChart2', title: 'Canais de Aquisição', type: 'pie', insight: 'Mídia Paga é o principal canal. "Indicação" tem o menor CAC, indicando potencial para um programa de afiliados.' },
+                        { id: 'educacaoChart3', title: 'Avaliação Média dos Cursos', type: 'line', insight: 'Cursos de "Programação" têm a maior avaliação média. Cursos de "Design" precisam de atenção.' },
+                        { id: 'educacaoChart4', title: 'Performance vs. Metas', type: 'radar_performance', insight: 'Aquisição e LTV estão acima do esperado, mas a Retenção está abaixo. Ações de engajamento são necessárias.' }
+                    ]
+                },
+                delivery: {
+                    title: "Dashboard de App de Delivery",
+                    description: "Monitoramento de volume de pedidos (GMV), ticket médio e análise de recorrência de clientes (cohort).",
+                    theme: "theme-delivery",
+                    filters: [ { id: 'cidade', label: 'Categoria', options: ['SP', 'RJ'] } ],
+                    data: {
+                        SP: { kpis: ['3.3M', 'R$ 2.8Bi', 'R$ 28,50', '5.1%', '12.5%', '18 min', '98%', [3.1, 3.2, 3.3]], charts: { deliveryChart1: [[10, 20, 250, 150, 80, 180, 350, 200], [50, 80, 90, 100, 120, 150, 100, 60]], deliveryChart2: [100, 45, 30, 25, 22], deliveryChart3: [35, 25, 20, 10, 10], deliveryChart4: {realizado: [95, 88, 92, 75, 85], esperado: [90, 90, 90, 80, 80]} } },
+                        RJ: { kpis: ['1.8M', 'R$ 1.5Bi', 'R$ 27,90', '6.2%', '12.8%', '22 min', '95%', [1.6, 1.7, 1.8]], charts: { deliveryChart1: [[8, 15, 200, 120, 60, 150, 280, 160], [40, 60, 70, 80, 100, 120, 80, 50]], deliveryChart2: [100, 42, 28, 22, 19], deliveryChart3: [40, 28, 15, 12, 5], deliveryChart4: {realizado: [92, 85, 88, 70, 82], esperado: [90, 90, 90, 80, 80]} } }
+                    },
+                    kpiDefs: [ { title: 'Pedidos/Dia', description: 'Média diária de pedidos realizados.' }, { title: 'GMV (R$)', description: 'Gross Merchandise Volume: Valor total de vendas.' }, { title: 'Ticket Médio', description: 'Valor médio de cada pedido.' }, { title: 'Churn Clientes', description: 'Percentual de clientes que deixaram de usar o app.' }, { title: 'Take Rate (%)', description: 'Percentual da receita do app sobre o GMV.' }, { title: 'Tempo de Entrega', description: 'Tempo médio do pedido à entrega.' }, { title: 'Uptime do App', description: 'Percentual de tempo que o app esteve funcional.' }, { title: 'Pedidos Diários (M)', description: 'Evolução de pedidos diários no trimestre.' } ],
+                    charts: [
+                        { id: 'deliveryChart1', title: 'Pedidos por Categoria e Hora', type: 'line_multi', insight: 'Picos de "Restaurantes" no almoço/jantar. Oportunidade para campanhas de marketing por horário.' },
+                        { id: 'deliveryChart2', title: 'Análise de Cohort - Recorrência', type: 'bar_simple', insight: 'Retenção do 1º para o 2º mês é de 45%. Necessidade de estratégias de engajamento para aumentar a recorrência.' },
+                        { id: 'deliveryChart3', title: 'Market Share por Categoria', type: 'pie', insight: 'Restaurantes dominam o GMV. Mercado e Farmácia são categorias com alto potencial de crescimento.' },
+                        { id: 'deliveryChart4', title: 'Performance vs. Metas', type: 'radar_performance', insight: 'O volume de pedidos (GMV) e a recorrência estão acima da meta, mas a retenção e a velocidade de entrega precisam de melhorias.' }
+                    ]
+                },
+                service: {
+                    title: "Dashboard de Service Planning",
+                    description: "Análise de performance de atendimento, capacidade da equipe e eficiência operacional.",
+                    theme: "theme-service",
+                    filters: [ { id: 'canal', label: 'Categoria', options: ['Chat', 'Phone'] } ],
+                    data: {
+                        Chat: { kpis: ['5,820', '78%', '2h 15m', '89%', 'R$ 18,50', '95%', '52', [5500, 5650, 5820]], charts: { serviceChart1: [[4500, 4800, 5100, 5300, 5600, 5820], [50, 50, 50, 52, 52, 52]], serviceChart2: [35, 25, 18, 12, 10], serviceChart3: [120, 115, 110, 116], serviceChart4: {realizado: [78, 89, 95, 90, 85], esperado: [80, 90, 95, 90, 80]} } },
+                        Phone: { kpis: ['2,150', '65%', '8m 30s', '82%', 'R$ 25,70', '92%', '48', [2000, 2100, 2150]], charts: { serviceChart1: [[1800, 1900, 2000, 2050, 2100, 2150], [25, 25, 25, 26, 26, 26]], serviceChart2: [45, 15, 25, 10, 5], serviceChart3: [85, 88, 82, 85], serviceChart4: {realizado: [65, 82, 92, 85, 75], esperado: [70, 85, 95, 88, 78]} } }
+                    },
+                    kpiDefs: [ { title: 'Tickets Abertos', description: 'Total de chamados de suporte abertos.' }, { title: 'First Call Resolution', description: '% de tickets resolvidos no primeiro contato.' }, { title: 'Tempo Médio de Resposta', description: 'Tempo médio para a primeira resposta.' }, { title: 'CSAT (%)', description: 'Índice de Satisfação do Cliente.' }, { title: 'Custo por Ticket', description: 'Custo operacional médio por ticket.' }, { title: 'SLA Atendimento (%)', description: 'Percentual de atendimentos dentro do prazo.' }, { title: 'Tickets/Agente/Dia', description: 'Produtividade média da equipe.' }, { title: 'Tickets Abertos (Mês)', description: 'Evolução do volume de tickets.' } ],
+                    charts: [
+                        { id: 'serviceChart1', title: 'Volume de Tickets vs. Headcount', type: 'combo', insight: 'Volume de tickets cresce mais que o headcount. Risco de sobrecarga da equipe.' },
+                        { id: 'serviceChart2', title: 'Principais Motivos de Contato', type: 'bar_horizontal', insight: 'Criar FAQ para "Problemas Pagamento" pode reduzir volume de tickets.' },
+                        { id: 'serviceChart3', title: 'Produtividade da Equipe (Tickets/Agente)', type: 'line_simple', insight: 'A produtividade por agente está caindo, reforçando o risco de sobrecarga e burnout. Ações de otimização são urgentes.' },
+                        { id: 'serviceChart4', title: 'Performance vs. Metas', type: 'radar_performance', insight: 'O CSAT e o FCR estão acima das metas, mas a produtividade e o custo por ticket estão desalinhados, indicando necessidade de otimização de processos.' }
+                    ]
+                },
+                poker: {
+                    title: "HARPOKER 🖖 GTO Analysis Deck",
+                    description: "Análise de estatísticas de jogo para otimização de estratégia e lucratividade (baseado em 600 mãos).",
+                    theme: "theme-poker",
+                    filters: [
+                        { id: 'gametype', label: 'Modo:', options: ['tournament', 'cash'] },
+                        { id: 'players', label: 'Jogadores:', options: ['9', '6'] }
+                    ],
+                    data: pokerData,
+                    kpiDefs: [
+                        { title: 'VPIP (%)', description: 'Voluntarily Put In Pot: Frequência com que o jogador coloca dinheiro no pote voluntariamente pré-flop.'},
+                        { title: 'PFR (%)', description: 'Pre-Flop Raise: Frequência com que o jogador dá raise pré-flop. Indica agressividade.'},
+                        { title: '3-Bet (%)', description: 'Frequência de re-raise sobre um raise inicial.'},
+                        { title: 'WTSD (%)', description: 'Frequência com que o jogador chega ao showdown.'},
+                        { title: 'W$SD (%)', description: 'Frequência com que o jogador ganha no showdown.'},
+                        { title: 'Aggression Factor', description: '(Bets + Raises) / Calls. Mede a agressividade pós-flop.' },
+                        { title: 'bb/100', description: 'Big Blinds ganhos a cada 100 mãos.' },
+                        { title: 'Winrate Semanal', description: 'Evolução da lucratividade (bb/100) nas últimas semanas.' }
+                    ],
+                    charts: [
+                        { id: 'pokerChart1', title: 'Análise Tática Posicional', type: 'radar', insight: 'O Gráfico de Radar compara 5 estatísticas chave por posição na mesa. Um jogador sólido adapta seu range, tornando-se mais agressivo (VPIP/PFR/3-Bet mais altos) em posições finais (BTN, CO) e mais cauteloso no início.' },
+                        { id: 'pokerChart2', title: 'Frequência de Ações Pós-Flop', type: 'bar_simple', insight: 'Alta C-Bet é boa, mas deve ser balanceada. Se o Fold to C-Bet dos oponentes for alto, explore. Se for baixo, diminua blefes.' },
+                        { id: 'pokerChart3', title: 'Lucratividade por Posição (bb/100)', type: 'bar_horizontal_poker', insight: 'Posições finais (BTN, CO) devem ser as mais lucrativas. Perdas em posições iniciais podem indicar que seus ranges de abertura estão muito amplos.'},
+                        { id: 'pokerChart4', title: 'Resumo das Estatísticas Analisadas', type: 'summary_list', insight: 'A análise de estatísticas agregadas revela tendências gerais, mas a revisão de mãos específicas é crucial para identificar e corrigir erros táticos pontuais que impactam a lucratividade.'}
+                    ]
+                }
+            };
+            
+            function createChart(elementId, type, data, isTrend = false) {
+                const ctx = document.getElementById(elementId)?.getContext('2d');
+                if (!ctx) return null;
+                const baseOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { y: { ticks: { color: '#94a3b8' } }, x: { ticks: { color: '#94a3b8' } } } };
+                if (isTrend) {
+                    baseOptions.plugins.legend.display = false;
+                    baseOptions.scales = { x: { display: false }, y: { display: false } };
+                }
+                let config;
+                
+                switch(type) {
+                    case 'bar': config = { type: 'bar', data: { labels: ['Jan', 'Fev', 'Mar'], datasets: [{ label: 'Receita', data: data[0], backgroundColor: '#2563eb' }, { label: 'Custo', data: data[1], backgroundColor: '#fb923c' }, { label: 'Orçado', data: data[2], borderColor: '#60a5fa', type: 'line', tension: 0.4 }] }, options: {...baseOptions, scales: { x: { stacked: true, ticks: { color: '#94a3b8' } }, y: { stacked: true, beginAtZero: true, ticks: { color: '#94a3b8' } } } } }; break;
+                    case 'doughnut': config = { type: 'doughnut', data: { labels: ['Pessoal', 'Marketing', 'Tecnologia', 'G&A'], datasets: [{ data: data, backgroundColor: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'], borderColor: '#1e293b', borderWidth: 4 }] }, options: { ...baseOptions, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1' } } } } }; break;
+                    case 'line': config = { type: 'line', data: { labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'], datasets: [{data: data, borderColor: '#0891b2', tension: 0.3 }]}, options: { ...baseOptions, plugins: { legend: { display: false } } }}; break;
+                    case 'line_multi': config = { type: 'line', data: { labels: ['08h', '12h', '16h', '20h'], datasets: [{ label: 'Restaurantes', data: data[0], borderColor: '#ef4444' }, { label: 'Mercado', data: data[1], borderColor: '#f87171' }] }, options: baseOptions }; break;
+                    case 'bar_horizontal': config = { type: 'bar', data: { labels: ['Serv. Digitais', 'Varejo Online', 'Varejo Físico'], datasets: [{ label: 'Chargeback (%)', data: data, backgroundColor: ['#f87171', '#fb923c', '#facc15'] }] }, options: { ...baseOptions, indexAxis: 'y', plugins: { legend: { display: false } } } }; break;
+                    case 'bar_stacked': config = { type: 'bar', data: { labels: ['2023.1', '2023.2', '2024.1', '2024.2'], datasets: [{ label: 'Novos Alunos', data: data[0], backgroundColor: '#d97706' }, { label: 'Alunos Evadidos', data: data[1], backgroundColor: '#ef4444' }] }, options: { ...baseOptions, scales: { x: { stacked: true }, y: { stacked: true } } } }; break;
+                    case 'pie': config = { type: 'pie', data: { labels: ['Digital (Pago)', 'Indicação', 'Vestibular Trad.', 'Outros'], datasets: [{ data: data, backgroundColor: ['#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7'], borderColor: '#1e293b' }] }, options: { ...baseOptions, plugins: { legend: { position: 'right' } } } }; break;
+                    case 'line_simple': config = { type: 'line', data: { labels: ['S1', 'S2', 'S3', 'S4'], datasets: [{data: data, borderColor: '#0891b2', tension: 0.3 }]}, options: { ...baseOptions, plugins: { legend: { display: false } } }}; break;
+                    case 'bar_simple': config = { type: 'bar', data: { labels: ['C-Bet Flop', 'Fold to C-Bet', 'C-Bet Turn', 'Fold to Turn Bet'], datasets: [{ label: 'Frequência (%)', data: data, backgroundColor: ['#be123c', '#e11d48', '#f43f5e', '#fb7185'] }] }, options: { ...baseOptions, plugins: { legend: { display: false } } } }; break;
+                    case 'combo': config = { type: 'bar', data: { labels: ['Jan', 'Fev', 'Mar', 'Abr'], datasets: [{ label: 'Tickets', data: data[0], yAxisID: 'y', backgroundColor: '#0891b2' }, { label: 'Headcount', data: data[1], yAxisID: 'y1', type: 'line', borderColor: '#f43f5e' }] }, options: { ...baseOptions, scales: { ...baseOptions.scales, y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#94a3b8' } } } } }; break;
+                    case 'radar_performance': config = { type: 'radar', data: { labels: ['Receita', 'Custo', 'Margem', 'Cresc.', 'Eficiência'], datasets: [{ label: 'Realizado', data: data.realizado, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)' }, { label: 'Esperado', data: data.esperado, borderColor: '#a8a29e', backgroundColor: 'rgba(168, 162, 158, 0.2)' }] }, options: { ...baseOptions, scales: { r: { suggestedMin: 0, suggestedMax: 100 } } } }; break;
+                    case 'radar': config = { type: 'radar', data: { labels: ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB'], datasets: [ { label: 'VPIP', data: data.vpip, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.2)' }, { label: 'PFR', data: data.pfr, borderColor: '#fb923c', backgroundColor: 'rgba(251, 146, 60, 0.2)' }, { label: '3-Bet', data: data.threeBet, borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.2)' }, { label: 'C-Bet', data: data.cBet, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.2)' }, { label: 'Fold to 3-Bet', data: data.foldTo3Bet, borderColor: '#a78bfa', backgroundColor: 'rgba(167, 139, 250, 0.2)' } ] }, options: { ...baseOptions, scales: { r: { suggestedMin: 0, grid: { color: '#334155' }, angleLines: { color: '#334155' }, pointLabels: { color: '#cbd5e1' }, ticks: { color: '#94a3b8', backdropColor: 'transparent' } } } } }; break;
+                    case 'bar_horizontal_poker': config = { type: 'bar', data: { labels: ['BTN', 'CO', 'MP', 'UTG', 'SB', 'BB'], datasets: [{ label: 'bb/100', data: data, backgroundColor: data.map(v => v > 0 ? '#16a34a' : '#be123c') }] }, options: { ...baseOptions, indexAxis: 'y', plugins: { legend: { display: false } } } }; break;
+                    case 'summary_list': createSummaryList(ctx.canvas.parentElement, data); return null;
+                    case 'waterfall': config = { type: 'bar', data: { labels: ['Início', 'Receita', 'Custos', 'Marketing', 'G&A', 'Final'], datasets: [{ data: data, backgroundColor: data.map(v => v > 0 ? '#16a34a' : '#dc2626') }] }, options: baseOptions }; break;
+                    case 'scatter': config = { type: 'scatter', data: { datasets: [{ label: 'Entregador vs Restaurante', data: data, backgroundColor: '#dc2626' }] }, options: baseOptions }; break;
+                    case 'bubble': config = { type: 'bubble', data: { datasets: [{ label: 'Tech', data: data, backgroundColor: 'rgba(217, 119, 6, 0.7)' }, { label: 'Business', data: [{x:920, y: 10100, r: 20}], backgroundColor: 'rgba(37, 99, 235, 0.7)' }] }, options: baseOptions }; break;
+                    case 'kpi_trend': config = { type: 'line', data: { labels: ['M1', 'M2', 'M3'], datasets: [{ data: data, borderColor: '#60a5fa', borderWidth: 2, pointRadius: 0 }] }, options: { ...baseOptions, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } } }; break;
+                    default: return null;
+                }
+                return new Chart(ctx, config);
+            }
+            
+            function createSummaryList(container, data) {
+                if (!container || !data) return;
+                container.innerHTML = '';
+                const list = document.createElement('ul');
+                list.className = 'summary-list text-slate-300 space-y-2';
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    list.appendChild(li);
+                });
+                container.appendChild(list);
+            }
+
+            function updateDashboardUI(dashboardId, filters) {
+                const config = dashboardLibrary[dashboardId];
+                if (!config || !config.data) return;
+
+                const data = (dashboardId === 'poker') 
+                    ? config.data[filters.gametype]?.[filters.players]
+                    : config.data[filters[config.filters[0].id]];
+
+                if (!data) return;
+
+                const kpiContainer = document.getElementById(`${dashboardId}-kpis`);
+                if(kpiContainer) {
+                    kpiContainer.innerHTML = config.kpiDefs.map((kpi, index) => {
+                        const isTrend = Array.isArray(data.kpis[index]);
+                        const kpiValue = isTrend ? data.kpis[index][data.kpis[index].length - 1] : data.kpis[index];
+                        return `<div class="kpi-card"><div class="flex flex-col flex-grow"><span class="tooltip">${kpi.description}</span><h3 class="text-sm font-medium text-slate-400">${kpi.title}</h3><p class="text-3xl font-bold text-white mt-1 kpi-value">${kpiValue}</p></div>${isTrend ? `<div class="kpi-trend-chart-wrapper"><canvas id="${dashboardId}-kpi-chart-${index}"></canvas></div>` : ''}</div>`;
+                    }).join('');
+                    
+                    config.kpiDefs.forEach((kpi, index) => {
+                        if(Array.isArray(data.kpis[index])) {
+                           createChart(`${dashboardId}-kpi-chart-${index}`, 'kpi_trend', data.kpis[index], true);
+                        }
+                    });
+                }
+                
+                if (chartInstances[dashboardId]) {
+                    chartInstances[dashboardId].forEach(chart => { if(chart) chart.destroy(); });
+                }
+                chartInstances[dashboardId] = [];
+
+                config.charts.forEach(chartConfig => {
+                    const chartData = data.charts[chartConfig.id];
+                    const chart = createChart(chartConfig.id, chartConfig.type, chartData);
+                    if(chart) chartInstances[dashboardId].push(chart);
+                });
+            }
+
+            function renderDashboard(dashboardId) {
+                mainContainer.innerHTML = '';
+                const config = dashboardLibrary[dashboardId];
+                if (!config) {
+                    mainContainer.innerHTML = `<p class="text-center text-red-400">Dashboard '${dashboardId}' não encontrado.</p>`;
+                    return;
+                }
+                
+                const section = document.createElement('section');
+                section.id = `${dashboardId}-dashboard`;
+                section.className = 'dashboard-section';
+                
+                const filtersHtml = `<div class="${config.theme} mb-6 flex flex-wrap items-center justify-start gap-4 md:gap-8">${config.filters.map(f => `<div class="flex items-center gap-2"><span class="text-sm font-semibold text-slate-300">${f.label}:</span><div id="${dashboardId}-filters-${f.id}" class="flex bg-slate-700 rounded-md p-1">${f.options.map((opt, i) => `<button data-dashboard="${dashboardId}" data-filter-type="${f.id}" data-filter-value="${opt}" class="filter-button ${i === 0 ? 'active-filter' : ''} px-3 py-1 text-xs rounded">${opt}${f.id === 'players' ? '-max' : ''}</button>`).join('')}</div></div>`).join('')}</div>`;
+                
+                const chartsHtml = config.charts.map(chart => 
+                    `<div class="chart-container"><h3 class="font-semibold text-slate-200 mb-4">${chart.title}</h3><div class="chart-wrapper" id="${chart.id}-wrapper"><canvas id="${chart.id}"></canvas></div><p class="insight-text text-xs text-slate-400"><b>Insight:</b> ${chart.insight}</p></div>`
+                ).join('');
+                
+                const titleColor = { 'financeiro': '#60a5fa', 'pagamentos': '#34d399', 'educacao': '#f59e0b', 'delivery': '#ef4444', 'service': '#22d3ee', 'poker': '#f43f5e' }[dashboardId];
+
+                section.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-1" style="color: ${titleColor};">${config.title}</h2>
+                    <p class="text-sm text-slate-400 mb-6">${config.description}</p>
+                    ${filtersHtml}
+                    <div id="${dashboardId}-kpis" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4"></div>
+                    <div id="${dashboardId}-charts" class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">${chartsHtml}</div>
+                `;
+                mainContainer.appendChild(section);
+                
+                updateDashboardUI(dashboardId, getInitialFilters(dashboardId));
+
+                document.querySelectorAll(`#${dashboardId}-dashboard .filter-button`).forEach(button => {
+                    button.addEventListener('click', e => {
+                        const dashboardId = e.target.dataset.dashboard;
+                        const currentConfig = dashboardLibrary[dashboardId];
+                        let currentFilters = {};
+
+                        currentConfig.filters.forEach(f => {
+                             if(f.id === e.target.dataset.filterType) {
+                                document.querySelectorAll(`button[data-dashboard="${dashboardId}"][data-filter-type="${f.id}"]`).forEach(btn => btn.classList.remove('active-filter'));
+                                e.target.classList.add('active-filter');
+                             } else if (f.id === e.target.dataset.filterId) {
+                                document.querySelectorAll(`button[data-dashboard="${dashboardId}"][data-filter-id="${f.id}"]`).forEach(btn => btn.classList.remove('active-filter'));
+                                e.target.classList.add('active-filter');
+                             }
+                             currentFilters[f.id] = document.querySelector(`#${dashboardId}-filters-${f.id} .active-filter`).dataset.filterValue;
+                        });
+                        
+                        updateDashboardUI(dashboardId, currentFilters);
+                    });
+                });
+            }
+
+            function getInitialFilters(dashboardId){
+                const config = dashboardLibrary[dashboardId];
+                let initialFilters = {};
+                config.filters.forEach(f => {
+                    initialFilters[f.id] = f.options[0];
+                });
+                return initialFilters;
+            }
+            
+            function router() {
+                const hash = window.location.hash.substring(1) || 'financeiro';
+                renderDashboard(hash);
+                document.querySelectorAll('#main-nav a').forEach(link => {
+                    link.classList.remove('active', 'theme-poker');
+                    if (link.dataset.tab === hash) {
+                        link.classList.add('active');
+                        if (hash === 'poker') link.classList.add('theme-poker');
+                    }
+                });
+            }
+
+            window.addEventListener('hashchange', router);
+            router(); 
+        });
+    </script>
+</body>
+</html>
